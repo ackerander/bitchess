@@ -1,0 +1,6 @@
+[alias]
+rr = "run --release"
+br = "build --release"
+
+[build]
+rustflags = ["-Ctarget-cpu=native"]
