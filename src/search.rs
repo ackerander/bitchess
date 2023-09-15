@@ -1,5 +1,4 @@
 use chess::*;
-use std::cmp;
 
 fn eval(board: &Board) -> i16 {
     let w_bits = board.color_combined(Color::White);
@@ -28,16 +27,17 @@ fn negamax(board: &Board, mut alpha: i16, beta: i16, depth: u8) -> i16 {
     // nodes += 1;
 
     let mut new_board = Board::default();
-    let mut score = i16::MIN;
     for m in mvs {
         board.make_move(m, &mut new_board);
-        score = cmp::max(score, -negamax(&new_board, -beta, -alpha, depth - 1));
-        alpha = cmp::max(score, alpha);
-        if alpha >= beta {
-            break;
+        let score = -negamax(&new_board, -beta, -alpha, depth - 1);
+        if score >= beta {
+            return score;
+        }
+        if score > alpha {
+            alpha = score;
         }
     }
-    score
+    alpha
 }
 
 fn quiescence(board: &Board, mut alpha: i16, beta: i16) -> i16 {
@@ -58,7 +58,7 @@ fn quiescence(board: &Board, mut alpha: i16, beta: i16) -> i16 {
     let mut new_board = Board::default();
     for m in mvs {
         board.make_move(m, &mut new_board);
-        let score = -quiescence(&board, -beta, -alpha);
+        let score = -quiescence(&new_board, -beta, -alpha);
         if score >= beta {
             return beta;
         }
@@ -69,7 +69,7 @@ fn quiescence(board: &Board, mut alpha: i16, beta: i16) -> i16 {
     alpha
 }
 
-pub fn think(board: &Board, mut alpha: i16, beta: i16, depth: u8) -> Option<(ChessMove, i16)> {
+pub fn think(board: &Board, depth: u8) -> Option<(ChessMove, i16)> {
     if depth == 0 {
         return None;
     }
@@ -78,17 +78,19 @@ pub fn think(board: &Board, mut alpha: i16, beta: i16, depth: u8) -> Option<(Che
 
     let mvs = MoveGen::new_legal(&board);
     let mut new_board = Board::default();
-    let mut best = (None, i16::MIN);
-    for m in mvs {
-        board.make_move(m, &mut new_board);
-        let eval = -negamax(&new_board, -beta, -alpha, depth - 1);
-        if best.1 < eval {
-            best = (Some(m), eval);
+    let mut best = None;
+    let mut alpha = -i16::MAX;
+    let beta = i16::MAX;
+    for mv in mvs {
+        board.make_move(mv, &mut new_board);
+        let score = -negamax(&new_board, -beta, -alpha, depth - 1);
+        if score >= beta {
+            return Some((mv, score));
         }
-        alpha = cmp::max(best.1, alpha);
-        if alpha >= beta {
-            break;
+        if score > alpha {
+            alpha = score;
+            best = Some(mv);
         }
     }
-    best.0.map(|m| (m, best.1))
+    best.map(|m| (m, alpha))
 }

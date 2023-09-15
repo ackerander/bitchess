@@ -85,7 +85,7 @@ fn parse_go(params: &mut SplitAsciiWhitespace, board: &Board) {
     match word {
         Some("depth") => match params.next().unwrap_or_default().parse::<u8>() {
             Ok(0) => eprintln!("Infinite not implmented"),
-            Ok(n) => println!("{}", search::think(&board, -i16::MAX, i16::MAX, n)
+            Ok(n) => println!("{}", search::think(&board, n)
                     .map(|(m, _)| format!("bestmove {}", m))
                     .unwrap_or("No move found!".to_string())),
             Err(e) => eprintln!("{}", e)
