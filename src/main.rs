@@ -6,7 +6,7 @@ use std::io;
 use std::str::{SplitAsciiWhitespace, FromStr};
 
 fn main() {
-    let mut board: Board = Board::default();
+    let mut board = Board::default();
     let stdin = io::stdin();
     loop {
         let mut input = String::new();
