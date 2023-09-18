@@ -1,16 +1,14 @@
 use chess::*;
 
 fn eval(board: &Board) -> i16 {
-    let w_bits = board.color_combined(Color::White);
-    let score_piece = |p: chess::Piece, p_score: i16| -> i16 {
-        let pieces = board.pieces(p);
-        let w_pieces = pieces & w_bits;
-        p_score * (w_pieces.popcnt() as i16 - (pieces ^ w_pieces).popcnt() as i16)
-    };
-    let score = score_piece(Piece::Pawn, 10) + score_piece(Piece::Knight, 32) +
-                score_piece(Piece::Bishop, 33) + score_piece(Piece::Rook, 50) +
-                score_piece(Piece::Queen, 90);
-    if board.side_to_move() == Color::White { score } else { -score }
+    let side_bits = board.color_combined(board.side_to_move());
+    let mut score = 0;
+    for e in ALL_PIECES.iter().zip([10, 32, 33, 50, 90].iter()) {
+        let pieces = board.pieces(*e.0);
+        let my_pieces = pieces & side_bits;
+        score += e.1 * (my_pieces.popcnt() as i16 - (pieces ^ my_pieces).popcnt() as i16);
+    }
+    score
 }
 
 fn negamax(board: &Board, mut alpha: i16, beta: i16, depth: u8) -> i16 {
