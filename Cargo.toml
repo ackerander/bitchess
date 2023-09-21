@@ -6,7 +6,8 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-chess = "3.2.0"
+#chess = { git = "https://github.com/ackerander/chess.git" }
+chess = { path = "../chess" }
 
 [profile.dev.package."*"]
 opt-level = 3

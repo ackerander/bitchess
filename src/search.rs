@@ -1,4 +1,5 @@
 use chess::*;
+use std::time::Instant;
 
 fn eval(board: &Board) -> i16 {
     let side_bits = board.color_combined(board.side_to_move());
@@ -12,10 +13,10 @@ fn eval(board: &Board) -> i16 {
 }
 
 fn negamax(board: &Board, mut alpha: i16, beta: i16, depth: u8) -> i16 {
-    let mvs = MoveGen::new_legal(&board);
-    if mvs.is_empty() {
-        return if *(board.checkers()) == EMPTY { 0 } else { -3000 - depth as i16 };
-    }
+    let mut mvs = match OrdMoves::new_ordered(&board) {
+        Some(m) => m,
+        None => return if *(board.checkers()) == EMPTY { 0 } else { -3000 - depth as i16 },
+    };
 
     if depth == 0 {
         return quiescence(&board, alpha, beta);
@@ -24,7 +25,7 @@ fn negamax(board: &Board, mut alpha: i16, beta: i16, depth: u8) -> i16 {
     // nodes += 1;
 
     let mut new_board = Board::default();
-    for m in mvs {
+    while let Some(m) = mvs.next_all() {
         board.make_move(m, &mut new_board);
         let score = -negamax(&new_board, -beta, -alpha, depth - 1);
         if score >= beta {
@@ -49,10 +50,11 @@ fn quiescence(board: &Board, mut alpha: i16, beta: i16) -> i16 {
         alpha = stand_pat;
     }
 
-    let mut mvs = MoveGen::new_legal(&board);
+    let mvs = match OrdMoves::new_ordered(&board) {
+        Some(m) => m,
+        None => return alpha,
+    };
     // TODO en pass
-    // Potential speedup search only caputres
-    mvs.remove_mask(!board.color_combined(!board.side_to_move()));
     let mut new_board = Board::default();
     for m in mvs {
         board.make_move(m, &mut new_board);
@@ -74,22 +76,24 @@ pub fn think(board: &Board, depth: u8) -> Option<(ChessMove, i16)> {
     // TODO inc nodes
     // nodes += 1;
 
-    let mvs = MoveGen::new_legal(&board);
+    let now = Instant::now();
+    let mut mvs = OrdMoves::new_ordered(&board)?;
     let mut new_board = Board::default();
     let mut best = None;
     let mut alpha = -i16::MAX;
     let beta = i16::MAX;
-    for mv in mvs {
-        board.make_move(mv, &mut new_board);
+    while let Some(m) = mvs.next_all() {
+        board.make_move(m, &mut new_board);
         let score = -negamax(&new_board, -beta, -alpha, depth - 1);
         if score >= beta {
-            return Some((mv, score));
+            return Some((m, score));
         }
         if score > alpha {
             alpha = score;
-            best = Some(mv);
+            best = Some(m);
         }
     }
+    println!("Elapsed time: {:.2?}", now.elapsed());
     best.map(|m| (m, alpha))
 }
 
@@ -107,7 +111,7 @@ mod tests {
         let board = Board::from_str("r3k2r/pbppqpb1/1pn3p1/7p/1N2pPn1/1PP4N/PB1P2PP/2QRKR2 b kq f3 0 1").unwrap();
         assert_eq!(think(&board, 1).map(|(m, _)| m), Some(ChessMove::new(Square::E4, Square::F3, None)));
 
-        let board = Board::from_str("6R1/5P1k/1p4Rp/p7/3N2p1/6P1/P1P4P/2K5 w - - 0 43").unwrap();
+        let board = Board::from_str("8/1R3P2/4r1kp/6p1/2p3P1/1b3p2/1B3P1P/6K1 w - - 0 1").unwrap();
         assert_eq!(think(&board, 1).map(|(m, _)| m), Some(ChessMove::new(Square::F7, Square::F8, Some(Piece::Knight))));
     }
     #[test]
