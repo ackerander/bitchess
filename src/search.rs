@@ -13,7 +13,7 @@ fn eval(board: &Board) -> i16 {
 }
 
 fn negamax(board: &Board, mut alpha: i16, beta: i16, depth: u8) -> i16 {
-    let mut mvs = match OrdMoves::new_ordered(&board) {
+    let mvs = match OrdMoves::new_ordered(&board) {
         Some(m) => m,
         None => return if *(board.checkers()) == EMPTY { 0 } else { -3000 - depth as i16 },
     };
@@ -21,11 +21,9 @@ fn negamax(board: &Board, mut alpha: i16, beta: i16, depth: u8) -> i16 {
     if depth == 0 {
         return quiescence(&board, alpha, beta);
     }
-    // TODO inc nodes
-    // nodes += 1;
 
     let mut new_board = Board::default();
-    while let Some(m) = mvs.next_all() {
+    for m in mvs {
         board.make_move(m, &mut new_board);
         let score = -negamax(&new_board, -beta, -alpha, depth - 1);
         if score >= beta {
@@ -39,9 +37,6 @@ fn negamax(board: &Board, mut alpha: i16, beta: i16, depth: u8) -> i16 {
 }
 
 fn quiescence(board: &Board, mut alpha: i16, beta: i16) -> i16 {
-    // TODO inc nodes
-    // nodes += 1;
-
     let stand_pat = eval(&board);
     if stand_pat >= beta {
         return beta;
@@ -50,13 +45,13 @@ fn quiescence(board: &Board, mut alpha: i16, beta: i16) -> i16 {
         alpha = stand_pat;
     }
 
-    let mvs = match OrdMoves::new_ordered(&board) {
+    let mut mvs = match OrdMoves::new_ordered(&board) {
         Some(m) => m,
         None => return alpha,
     };
     // TODO en pass
     let mut new_board = Board::default();
-    for m in mvs {
+    while let Some(m) = mvs.next_capture() {
         board.make_move(m, &mut new_board);
         let score = -quiescence(&new_board, -beta, -alpha);
         if score >= beta {
@@ -73,16 +68,14 @@ pub fn think(board: &Board, depth: u8) -> Option<(ChessMove, i16)> {
     if depth == 0 {
         return None;
     }
-    // TODO inc nodes
-    // nodes += 1;
 
     let now = Instant::now();
-    let mut mvs = OrdMoves::new_ordered(&board)?;
+    let mvs = OrdMoves::new_ordered(&board)?;
     let mut new_board = Board::default();
     let mut best = None;
     let mut alpha = -i16::MAX;
     let beta = i16::MAX;
-    while let Some(m) = mvs.next_all() {
+    for m in mvs {
         board.make_move(m, &mut new_board);
         let score = -negamax(&new_board, -beta, -alpha, depth - 1);
         if score >= beta {
